@@ -79,7 +79,7 @@
     "@glimmer/opcode-compiler": "0.38.5-alpha.2",
     "@glimmer/program": "0.38.5-alpha.2",
     "@glimmer/reference": "0.38.5-alpha.2",
-    "@glimmer/runtime": "0.38.5-alpha.2",
+    "@glimmer/runtime": "0.42.0",
     "@types/qunit": "^2.5.4",
     "@types/rsvp": "^4.0.3",
     "auto-dist-tag": "^1.0.0",
