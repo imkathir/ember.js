@@ -2,6 +2,7 @@ import { OwnedTemplate, TemplateFactory } from '@ember/-internals/glimmer';
 import {
   computed,
   defineProperty,
+  descriptorForProperty,
   get,
   getProperties,
   isEmpty,
@@ -17,9 +18,11 @@ import {
   setFrameworkClass,
   typeOf,
 } from '@ember/-internals/runtime';
+import { lookupDescriptor } from '@ember/-internals/utils';
 import Controller from '@ember/controller';
 import { assert, deprecate, info, isTesting } from '@ember/debug';
 import { ROUTER_EVENTS } from '@ember/deprecated-features';
+import { dependentKeyCompat } from '@ember/object/compat';
 import { assign } from '@ember/polyfills';
 import { once } from '@ember/runloop';
 import { classify } from '@ember/string';
@@ -2005,6 +2008,21 @@ function mergeEachQueryParams(controllerQP: {}, routeQP: {}) {
 
 function addQueryParamsObservers(controller: any, propNames: string[]) {
   propNames.forEach(prop => {
+    if (descriptorForProperty(controller, prop) === undefined) {
+      let desc = lookupDescriptor(controller, prop);
+
+      if (desc !== null && (typeof desc.get === 'function' || typeof desc.set === 'function')) {
+        defineProperty(
+          controller,
+          prop,
+          dependentKeyCompat({
+            get: desc.get,
+            set: desc.set,
+          })
+        );
+      }
+    }
+
     controller.addObserver(`${prop}.[]`, controller, controller._qpChanged);
   });
 }

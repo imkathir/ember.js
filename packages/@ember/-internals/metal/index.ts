@@ -56,7 +56,13 @@ export { default as getProperties } from './lib/get_properties';
 export { default as setProperties } from './lib/set_properties';
 export { default as expandProperties } from './lib/expand_properties';
 
-export { addObserver, activateObserver, removeObserver, flushAsyncObservers } from './lib/observer';
+export {
+  addObserver,
+  activateObserver,
+  removeObserver,
+  flushAsyncObservers,
+  flushSyncObservers,
+} from './lib/observer';
 export { Mixin, aliasMethod, mixin, observer, applyMixin } from './lib/mixin';
 export { default as inject, DEBUG_INJECTION_FUNCTIONS } from './lib/injected_property';
 export { tagForProperty, tagFor, markObjectAsDirty, UNKNOWN_PROPERTY_TAG } from './lib/tags';
