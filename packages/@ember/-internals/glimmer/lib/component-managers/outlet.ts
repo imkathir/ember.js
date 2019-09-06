@@ -10,7 +10,6 @@ import {
   Arguments,
   ComponentDefinition,
   ElementOperations,
-  Environment,
   Invocation,
   WithDynamicTagName,
   WithStaticLayout,
@@ -23,6 +22,7 @@ import { OutletState } from '../utils/outlet';
 import { RootReference } from '../utils/references';
 import OutletView from '../views/outlet';
 import AbstractManager from './abstract';
+import Environment from '../environment';
 
 function instrumentationPayload(def: OutletDefinitionState) {
   return { object: `${def.name}:${def.outlet}` };
@@ -30,6 +30,7 @@ function instrumentationPayload(def: OutletDefinitionState) {
 
 interface OutletInstanceState {
   self: VersionedPathReference<any | undefined>;
+  environment: Environment;
   finalize: () => void;
 }
 
@@ -70,12 +71,13 @@ class OutletComponentManager extends AbstractManager<OutletInstanceState, Outlet
     dynamicScope: DynamicScope
   ) {
     if (DEBUG) {
-      this._pushToDebugStack(`template:${definition.template.referrer.moduleName}`, environment);
+      environment.debugStack.push(`template:${definition.template.referrer.moduleName}`);
     }
     dynamicScope.outletState = definition.ref;
 
     return {
       self: RootReference.create(definition.controller),
+      environment,
       finalize: _instrumentStart('render.outlet', instrumentationPayload, definition),
     };
   }
@@ -106,7 +108,7 @@ class OutletComponentManager extends AbstractManager<OutletInstanceState, Outlet
     state.finalize();
 
     if (DEBUG) {
-      this.debugStack.pop();
+      state.environment.debugStack.pop();
     }
   }
 

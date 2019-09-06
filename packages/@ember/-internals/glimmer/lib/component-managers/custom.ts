@@ -27,6 +27,7 @@ import RuntimeResolver from '../resolver';
 import { OwnedTemplate } from '../template';
 import { RootReference } from '../utils/references';
 import AbstractComponentManager from './abstract';
+import { ENV } from '@ember/-internals/environment';
 
 const CAPABILITIES = {
   dynamicLayout: false,
@@ -163,7 +164,7 @@ export default class CustomComponentManager<ComponentInstance>
       RuntimeResolver
     > {
   create(
-    _env: Environment,
+    env: Environment,
     definition: CustomComponentDefinitionState<ComponentInstance>,
     args: Arguments
   ): CustomComponentState<ComponentInstance> {
@@ -246,7 +247,16 @@ export default class CustomComponentManager<ComponentInstance>
 
     const component = delegate.createComponent(definition.ComponentClass.class, value);
 
-    return new CustomComponentState(delegate, component, capturedArgs, namedArgsProxy);
+    let bucket = new CustomComponentState(delegate, component, capturedArgs, env, namedArgsProxy);
+
+    if (ENV._DEBUG_RENDER_TREE) {
+      env.debugRenderTree.push(bucket, {
+        type: 'component',
+        name: definition.name,
+      });
+    }
+
+    return bucket;
   }
 
   update({ delegate, component, args, namedArgsProxy }: CustomComponentState<ComponentInstance>) {
@@ -304,7 +314,11 @@ export default class CustomComponentManager<ComponentInstance>
     return args.tag;
   }
 
-  didRenderLayout() {}
+  didRenderLayout(bucket: CustomComponentState<ComponentInstance>) {
+    if (ENV._DEBUG_RENDER_TREE) {
+      bucket.env.debugRenderTree.pop();
+    }
+  }
 
   getLayout(state: DefinitionState<ComponentInstance>): Invocation {
     return {
@@ -323,6 +337,7 @@ export class CustomComponentState<ComponentInstance> {
     public delegate: ManagerDelegate<ComponentInstance>,
     public component: ComponentInstance,
     public args: CapturedArguments,
+    public env: Environment,
     public namedArgsProxy?: {}
   ) {}
 

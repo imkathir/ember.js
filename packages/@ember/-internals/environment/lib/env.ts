@@ -98,6 +98,8 @@ export const ENV = {
   */
   _TEMPLATE_ONLY_GLIMMER_COMPONENTS: false,
 
+  _DEBUG_RENDER_TREE: false,
+
   /**
     Whether the app is using jQuery. See RFC #294.
 

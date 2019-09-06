@@ -1,5 +1,5 @@
 import { OwnedTemplateMeta } from '@ember/-internals/views';
-import { ComponentCapabilities } from '@glimmer/interfaces';
+import { ComponentCapabilities, Template, Option } from '@glimmer/interfaces';
 import { CONSTANT_TAG } from '@glimmer/reference';
 import {
   ComponentDefinition,
@@ -10,6 +10,8 @@ import {
 import RuntimeResolver from '../resolver';
 import { OwnedTemplate } from '../template';
 import AbstractManager from './abstract';
+import Environment from '../environment';
+import { ENV } from '@ember/-internals/environment';
 
 const CAPABILITIES: ComponentCapabilities = {
   dynamicLayout: false,
@@ -24,8 +26,14 @@ const CAPABILITIES: ComponentCapabilities = {
   createInstance: true,
 };
 
-export default class TemplateOnlyComponentManager extends AbstractManager<null, OwnedTemplate>
-  implements WithStaticLayout<null, OwnedTemplate, OwnedTemplateMeta, RuntimeResolver> {
+export interface DebugStateBucket {
+  environment: Environment;
+}
+
+export default class TemplateOnlyComponentManager
+  extends AbstractManager<Option<DebugStateBucket>, OwnedTemplate>
+  implements
+    WithStaticLayout<Option<DebugStateBucket>, OwnedTemplate, OwnedTemplateMeta, RuntimeResolver> {
   getLayout(template: OwnedTemplate): Invocation {
     const layout = template.asLayout();
     return {
@@ -38,8 +46,20 @@ export default class TemplateOnlyComponentManager extends AbstractManager<null, 
     return CAPABILITIES;
   }
 
-  create(): null {
-    return null;
+  create(
+    environment: Environment,
+    template: Template<OwnedTemplateMeta>
+  ): Option<DebugStateBucket> {
+    if (ENV._DEBUG_RENDER_TREE) {
+      let bucket = { environment };
+      environment.debugRenderTree.push(bucket, {
+        type: 'component',
+        name: template.referrer.moduleName,
+      });
+      return bucket;
+    } else {
+      return null;
+    }
   }
 
   getSelf() {
@@ -52,6 +72,12 @@ export default class TemplateOnlyComponentManager extends AbstractManager<null, 
 
   getDestructor() {
     return null;
+  }
+
+  didRenderLayout(bucket: Option<DebugStateBucket>): void {
+    if (ENV._DEBUG_RENDER_TREE) {
+      bucket!.environment.debugRenderTree.pop();
+    }
   }
 }
 

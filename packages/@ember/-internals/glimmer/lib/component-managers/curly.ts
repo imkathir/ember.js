@@ -47,8 +47,10 @@ import {
 } from '../utils/bindings';
 import ComponentStateBucket, { Component } from '../utils/curly-component-state-bucket';
 import { processComponentArgs } from '../utils/process-args';
+import { WeakRef } from '../utils/weak';
 import AbstractManager from './abstract';
 import DefinitionState from './definition-state';
+import { ENV } from '@ember/-internals/environment';
 
 function aliasIdToElementId(args: Arguments, props: any) {
   if (args.named.has('id')) {
@@ -239,7 +241,7 @@ export default class CurlyComponentManager
     hasBlock: boolean
   ): ComponentStateBucket {
     if (DEBUG) {
-      this._pushToDebugStack(`component:${state.name}`, environment);
+      environment.debugStack.push(`component:${state.name}`);
     }
 
     // Get the nearest concrete component instance from the scope. "Virtual"
@@ -274,6 +276,12 @@ export default class CurlyComponentManager
     if (state.template) {
       props.layout = state.template;
     }
+
+    // caller:
+    // <FaIcon @name="bug" />
+    //
+    // callee:
+    // <i class="fa-{{@name}}"></i>
 
     // Now that we've built up all of the properties to set on the component instance,
     // actually create it.
@@ -328,6 +336,13 @@ export default class CurlyComponentManager
 
     if (environment.isInteractive && hasWrappedElement) {
       component.trigger('willRender');
+    }
+
+    if (ENV._DEBUG_RENDER_TREE) {
+      environment.debugRenderTree.push(bucket, {
+        type: 'component',
+        name: state.name,
+      });
     }
 
     return bucket;
@@ -388,8 +403,12 @@ export default class CurlyComponentManager
     bucket.component[BOUNDS] = bounds;
     bucket.finalize();
 
+    if (ENV._DEBUG_RENDER_TREE) {
+      bucket.environment.debugRenderTree.pop();
+    }
+
     if (DEBUG) {
-      this.debugStack.pop();
+      bucket.environment.debugStack.pop();
     }
   }
 
@@ -409,7 +428,7 @@ export default class CurlyComponentManager
     let { component, args, argsRevision, environment } = bucket;
 
     if (DEBUG) {
-      this._pushToDebugStack(component._debugContainerKey, environment);
+      environment.debugStack.push(component._debugContainerKey);
     }
 
     bucket.finalizer = _instrumentStart('render.component', rerenderInstrumentDetails, component);
@@ -437,7 +456,7 @@ export default class CurlyComponentManager
     bucket.finalize();
 
     if (DEBUG) {
-      this.debugStack.pop();
+      bucket.environment.debugStack.pop();
     }
   }
 
@@ -449,7 +468,12 @@ export default class CurlyComponentManager
   }
 
   getDestructor(stateBucket: ComponentStateBucket): Option<Destroyable> {
-    return stateBucket;
+    return {
+      destroy() {
+        WeakRef.willDestroy(stateBucket);
+        stateBucket.destroy();
+      },
+    };
   }
 }
 

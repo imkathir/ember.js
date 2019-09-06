@@ -26,6 +26,7 @@ interface EngineState {
   engine: EngineInstance;
   controller: any;
   self: RootReference<any>;
+  environment: Environment;
   modelRef?: VersionedPathReference<Opaque>;
 }
 
@@ -70,7 +71,7 @@ class MountManager extends AbstractManager<EngineState, EngineDefinitionState>
 
   create(environment: Environment, { name }: EngineDefinitionState, args: Arguments) {
     if (DEBUG) {
-      this._pushEngineToDebugStack(`engine:${name}`, environment);
+      environment.debugStack.pushEngine(`engine:${name}`);
     }
 
     // TODO
@@ -96,12 +97,12 @@ class MountManager extends AbstractManager<EngineState, EngineDefinitionState>
     if (modelRef === undefined) {
       controller = controllerFactory.create();
       self = new RootReference(controller);
-      bucket = { engine, controller, self };
+      bucket = { engine, controller, self, environment };
     } else {
       let model = modelRef.value();
       controller = controllerFactory.create({ model });
       self = new RootReference(controller);
-      bucket = { engine, controller, self, modelRef };
+      bucket = { engine, controller, self, modelRef, environment };
     }
 
     return bucket;
@@ -123,9 +124,9 @@ class MountManager extends AbstractManager<EngineState, EngineDefinitionState>
     return engine;
   }
 
-  didRenderLayout(): void {
+  didRenderLayout(bucket: EngineState): void {
     if (DEBUG) {
-      this.debugStack.pop();
+      bucket.environment.debugStack.pop();
     }
   }
 
